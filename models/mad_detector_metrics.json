@@ -1,0 +1,55 @@
+{
+  "task": "multi-object Moroccan currency detection and frame-by-frame counting",
+  "architecture": "YOLO11n",
+  "epochs": 8,
+  "image_size": 320,
+  "batch_size": 8,
+  "device": "cpu",
+  "source_unique_images": 336,
+  "synthetic_test_scenes": 72,
+  "synthetic_train_scenes": 72,
+  "synthetic_validation_scenes": 36,
+  "synthetic_objects_per_scene": 4,
+  "test_metrics": {
+    "precision": 0.7407573110167397,
+    "recall": 0.8123477422746805,
+    "map50": 0.7971200831827269,
+    "map50_95": 0.6889909588026731,
+    "counting": {
+      "confidence_threshold": 0.4,
+      "test_scenes": 72,
+      "exact_object_count_scenes": 40,
+      "exact_denomination_count_scenes": 12,
+      "mean_detected_objects_per_scene": 3.9722222222222223,
+      "mean_absolute_total_error_dh": 34.83472222222221
+    }
+  },
+  "demo_scene_detections": {
+    "coin_10dh": 1,
+    "note_200dh": 1,
+    "note_20dh": 1,
+    "note_50dh": 1
+  },
+  "demo_scene_total_dh": 280.0,
+  "limitations": [
+    "The classification dataset does not contain manually drawn object boxes.",
+    "Initial training boxes cover each source image; test scenes are synthetic image composites.",
+    "Real-scene performance needs manually annotated multi-object images.",
+    "Frame totals are not accumulated between video frames."
+  ],
+  "initial_weights": "fine-tuned from a 30-epoch YOLO11n detector checkpoint",
+  "training_stages": [
+    {
+      "initial_weights": "yolo11n.pt",
+      "epochs": 30,
+      "data": "single-image full-frame pseudo-boxes"
+    },
+    {
+      "initial_weights": "previous YOLO11n detector checkpoint",
+      "epochs": 8,
+      "data": "single images plus 72 synthetic multi-object scenes"
+    }
+  ],
+  "demo_scene_ground_truth_objects": 4,
+  "demo_scene_ground_truth_total_dh": 280.0
+}

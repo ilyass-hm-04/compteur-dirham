@@ -41,7 +41,7 @@ python -m mad_counter --help
 
 ## 2. Préparer les données (indispensable avant l'entraînement)
 
-Le modèle attend un dataset **YOLO Object Detection** : chaque objet visible doit avoir une boîte englobante et une classe. Utilisez Roboflow, CVAT ou un outil équivalent pour annoter les pièces et billets, puis exportez le dataset au format YOLO.
+Le détecteur attend un dataset **YOLO Object Detection** : chaque objet visible doit avoir une boîte englobante et une classe. Utilisez Roboflow, CVAT ou un outil équivalent pour annoter les pièces et billets, puis exportez le dataset au format YOLO.
 
 Placez les fichiers ainsi, en conservant les paires image/annotation :
 
@@ -61,7 +61,9 @@ dataset/
 
 Le fichier `dataset/data.yaml` fourni est un modèle de configuration. Les images et les fichiers `.txt` de labels correspondants ne sont pas inclus ; ajoutez-les dans les dossiers ci-dessus. Chaque ligne d'un label YOLO doit contenir `class_id x_center y_center width height`, avec les coordonnées normalisées entre 0 et 1. Les identifiants de classe doivent suivre l'ordre présent dans `dataset/data.yaml`.
 
-Le dossier de données déjà présent à côté du projet (`dataset/Moroccan Money dataset`, organisé par valeur) est un dataset de **classification** et ne contient pas les boîtes YOLO. Il ne peut donc pas entraîner directement ce détecteur. Il peut servir de source d'images à annoter, sous réserve de vérifier les droits d'utilisation et d'ajouter les annotations de détection.
+Le dossier de données source (`dataset/Moroccan Money dataset`, organisé par valeur) contient des photos isolées, pas des scènes réelles annotées. La commande `train-detector` crée des boîtes initiales couvrant chaque photo et des scènes synthétiques de quatre objets pour entraîner, valider et tester le comptage. Les images sources, les jeux de données générés et les images de démonstration restent locaux et ne sont pas inclus dans Git.
+
+> **Limite importante :** les boîtes couvrant les photos et les scènes composites sont des annotations approximatives/générées, pas des boîtes tracées à la main. Le détecteur reconnaît plusieurs objets sur ces exemples, mais n'est pas validé sur des photos naturelles contenant plusieurs monnaies. Pour un comptage fiable, annotez de vraies scènes avec CVAT ou Roboflow, puis utilisez `train` avec le dataset YOLO ci-dessus.
 
 ### Entraîner un classificateur de test sur ces photos
 
@@ -81,7 +83,25 @@ Testez une photo contenant une seule pièce ou un seul billet :
 python -m mad_counter classify --weights models/mad_classifier.pt --source chemin\vers\photo_recadree.jpg
 ```
 
-Les détails de l'entraînement et les métriques sont dans [models/README.md](./models/README.md) et [models/mad_classifier_metrics.json](./models/mad_classifier_metrics.json). Les images de test classées par valeur ne sont pas des boîtes annotées et les métriques du classificateur ne mesurent pas la capacité à compter dans une scène réelle.
+Les détails de l'entraînement et les métriques sont dans [models/README.md](./models/README.md) et [models/mad_classifier_metrics.json](./models/mad_classifier_metrics.json). Les métriques du classificateur ne mesurent pas la capacité à compter dans une scène réelle.
+
+### Entraîner le détecteur multiobjets avec le jeu de démonstration
+
+Depuis la racine du dépôt :
+
+```powershell
+python -m mad_counter train-detector --source "..\dataset\Moroccan Money dataset" --device cpu
+```
+
+Cette commande crée un jeu YOLO isolé, répartit les sources sans doublons entre entraînement/validation/test, entraîne sur des photos individuelles et des scènes composites de quatre objets, puis évalue 72 scènes synthétiques de test. Le seuil de confiance par défaut `--conf 0.40` est réglé pour équilibrer détections manquées et doublons sur ce test synthétique ; adaptez-le après annotation de vraies scènes. Le total additionne la valeur des objets détectés dans l'image courante ; un total vidéo n'est pas cumulé entre les frames. Le meilleur checkpoint est enregistré dans `models/best_mad_detector.pt`, les métriques dans `models/mad_detector_metrics.json` et un exemple annoté dans `output/multiobject_demo.jpg` (local uniquement).
+
+Pour tester le total sur une photo de plusieurs objets :
+
+```powershell
+python -m mad_counter predict --weights models/best_mad_detector.pt --source chemin\vers\photo.jpg
+```
+
+Le test synthétique est utile pour valider le fonctionnement du comptage et la chaîne de détection, mais **ne remplace pas** l'annotation et l'évaluation sur des scènes réelles.
 
 ## 3. Entraîner et comparer les modèles
 
@@ -144,7 +164,7 @@ python -m unittest discover -s tests
 ```text
 mad_counter/          Code d'entraînement, de classification, d'inférence et interface CLI
 dataset/data.yaml     Configuration YOLO et ordre des classes
-models/               Poids du classificateur de démonstration et détecteur entraîné (si disponible)
+models/               Classificateur de démonstration, détecteur entraîné et métriques
 runs/                 Journaux, résultats et comparaison (créés localement)
 output/               Prédictions annotées (créées localement)
 ```

@@ -26,7 +26,7 @@ def _validate_model_names(names):
     return normalized
 
 
-def annotate_frame(model, frame, confidence=0.45, image_size=640):
+def annotate_frame(model, frame, confidence=0.40, image_size=640):
     """Retourne l'image annotée, le total DH et le comptage par classe."""
     import cv2
 
@@ -61,7 +61,7 @@ def predict_source(
     model,
     source,
     output=None,
-    confidence=0.45,
+    confidence=0.40,
     image_size=640,
     show=True,
 ):

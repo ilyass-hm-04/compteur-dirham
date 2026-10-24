@@ -5,6 +5,7 @@ __pycache__/
 models/*.pt
 models/*.onnx
 !models/mad_classifier.pt
+!models/best_mad_detector.pt
 runs/
 output/
 dataset/train/

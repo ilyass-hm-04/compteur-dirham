@@ -25,7 +25,7 @@ def _build_parser():
     predict.add_argument("--weights", default="models/best_mad_detector.pt")
     predict.add_argument("--source", required=True, help="Fichier image/vidéo ou numéro de caméra.")
     predict.add_argument("--output", help="Chemin de sortie annoté.")
-    predict.add_argument("--conf", type=float, default=0.45)
+    predict.add_argument("--conf", type=float, default=0.40)
     predict.add_argument("--imgsz", type=int, default=640)
     predict.add_argument("--no-show", action="store_true", help="Ne pas ouvrir de fenêtre d'affichage.")
 
@@ -57,6 +57,27 @@ def _build_parser():
     train_classifier.add_argument("--output-dir", default="runs/classification")
     train_classifier.add_argument("--dataset-dir", default="runs/classification_dataset")
     train_classifier.add_argument("--model-output", default="models/mad_classifier.pt")
+
+    train_detector = commands.add_parser(
+        "train-detector",
+        help="Entraîner un détecteur multiobjets et tester le comptage sur des scènes synthétiques.",
+    )
+    train_detector.add_argument(
+        "--source",
+        required=True,
+        help="Dossier des images classées par valeur (sous-dossiers 0.1 à 200).",
+    )
+    train_detector.add_argument("--weights", default="yolo11n.pt")
+    train_detector.add_argument("--epochs", type=int, default=40)
+    train_detector.add_argument("--imgsz", type=int, default=416)
+    train_detector.add_argument("--batch", type=int, default=8)
+    train_detector.add_argument("--device", default="cpu")
+    train_detector.add_argument("--output-dir", default="runs/detection")
+    train_detector.add_argument("--dataset-dir", default="runs/detection_dataset")
+    train_detector.add_argument("--model-output", default="models/best_mad_detector.pt")
+    train_detector.add_argument("--train-scenes", type=int, default=72)
+    train_detector.add_argument("--validation-scenes", type=int, default=36)
+    train_detector.add_argument("--test-scenes", type=int, default=72)
 
     classify = commands.add_parser(
         "classify",
@@ -131,6 +152,27 @@ def main():
             output_dir=args.output_dir,
             dataset_dir=args.dataset_dir,
             model_output=args.model_output,
+        )
+    elif args.command == "train-detector":
+        if args.epochs < 1 or args.imgsz < 64 or args.batch < 1:
+            parser.error("--epochs, --batch doivent être positifs et --imgsz doit être >= 64.")
+        if min(args.train_scenes, args.validation_scenes, args.test_scenes) < 1:
+            parser.error("--train-scenes, --validation-scenes et --test-scenes doivent être positifs.")
+        from .classifier import train_detector_from_classification
+
+        train_detector_from_classification(
+            source=args.source,
+            weights=args.weights,
+            epochs=args.epochs,
+            image_size=args.imgsz,
+            batch_size=args.batch,
+            device=args.device,
+            output_dir=args.output_dir,
+            dataset_dir=args.dataset_dir,
+            model_output=args.model_output,
+            train_scenes=args.train_scenes,
+            validation_scenes=args.validation_scenes,
+            test_scenes=args.test_scenes,
         )
     elif args.command == "classify":
         from pathlib import Path
