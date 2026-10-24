@@ -40,6 +40,32 @@ def _build_parser():
     export.add_argument("--format", choices=("onnx", "tflite"), default="onnx")
     export.add_argument("--imgsz", type=int, default=640)
 
+    train_classifier = commands.add_parser(
+        "train-classifier",
+        help="Entraîner un modèle de classification sur des photos classées par valeur.",
+    )
+    train_classifier.add_argument(
+        "--source",
+        required=True,
+        help="Dossier d'images classées dans des sous-dossiers 0.1, 0.2, ..., 200.",
+    )
+    train_classifier.add_argument("--weights", default="yolo11n-cls.pt")
+    train_classifier.add_argument("--epochs", type=int, default=20)
+    train_classifier.add_argument("--imgsz", type=int, default=128)
+    train_classifier.add_argument("--batch", type=int, default=16)
+    train_classifier.add_argument("--device", default="cpu")
+    train_classifier.add_argument("--output-dir", default="runs/classification")
+    train_classifier.add_argument("--dataset-dir", default="runs/classification_dataset")
+    train_classifier.add_argument("--model-output", default="models/mad_classifier.pt")
+
+    classify = commands.add_parser(
+        "classify",
+        help="Classer une photo recadrée contenant une seule pièce ou un billet.",
+    )
+    classify.add_argument("--weights", default="models/mad_classifier.pt")
+    classify.add_argument("--source", required=True, help="Chemin vers la photo d'un seul objet.")
+    classify.add_argument("--imgsz", type=int, default=128)
+
     return parser
 
 
@@ -64,10 +90,10 @@ def main():
     elif args.command == "predict":
         if not 0 < args.conf <= 1:
             parser.error("--conf doit être supérieur à 0 et inférieur ou égal à 1.")
-        from ultralytics import YOLO
         from .inference import _validate_model_names, predict_source
+        from .model_loading import load_yolo_model
 
-        model = YOLO(args.weights)
+        model = load_yolo_model(args.weights)
         _validate_model_names(model.names)
         predict_source(
             model,
@@ -83,13 +109,36 @@ def main():
         evaluate_model(args.weights, args.data, args.imgsz, args.device)
     elif args.command == "export":
         from pathlib import Path
-        from ultralytics import YOLO
+        from .model_loading import load_yolo_model
 
         weights = Path(args.weights)
         if not weights.is_file():
             parser.error(f"Poids introuvables : {weights}")
-        exported = YOLO(str(weights)).export(format=args.format, imgsz=args.imgsz)
+        exported = load_yolo_model(weights).export(format=args.format, imgsz=args.imgsz)
         print(f"Modèle exporté : {exported}")
+    elif args.command == "train-classifier":
+        if args.epochs < 1 or args.imgsz < 1 or args.batch < 1:
+            parser.error("--epochs, --imgsz et --batch doivent être positifs.")
+        from .classifier import train_classifier
+
+        train_classifier(
+            source=args.source,
+            weights=args.weights,
+            epochs=args.epochs,
+            image_size=args.imgsz,
+            batch_size=args.batch,
+            device=args.device,
+            output_dir=args.output_dir,
+            dataset_dir=args.dataset_dir,
+            model_output=args.model_output,
+        )
+    elif args.command == "classify":
+        from pathlib import Path
+        from .classifier import classify_image
+
+        if not Path(args.weights).is_file():
+            parser.error(f"Poids introuvables : {args.weights}")
+        classify_image(args.weights, args.source, args.imgsz)
 
 
 if __name__ == "__main__":

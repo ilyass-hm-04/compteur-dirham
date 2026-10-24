@@ -1,0 +1,26 @@
+{
+  "task": "single-object image classification",
+  "architecture": "YOLO11n-cls",
+  "pretrained_initial_weights": "yolo11n-cls.pt",
+  "training": {
+    "epochs": 10,
+    "image_size": 128,
+    "batch_size": 8,
+    "device": "cpu",
+    "unique_images": 336,
+    "train_images": 215,
+    "validation_images": 54,
+    "test_images": 67,
+    "classes": 11,
+    "duplicate_handling": "Exact SHA-256 duplicates removed before splitting"
+  },
+  "test_metrics": {
+    "top1_accuracy": 0.7761194029850746,
+    "top5_accuracy": 0.9850746268656716
+  },
+  "limitations": [
+    "Classifies one isolated object per image",
+    "Does not detect or count multiple objects",
+    "The small classification dataset does not validate real-world camera performance"
+  ]
+}

@@ -63,6 +63,26 @@ Le fichier `dataset/data.yaml` fourni est un modèle de configuration. Les image
 
 Le dossier de données déjà présent à côté du projet (`dataset/Moroccan Money dataset`, organisé par valeur) est un dataset de **classification** et ne contient pas les boîtes YOLO. Il ne peut donc pas entraîner directement ce détecteur. Il peut servir de source d'images à annoter, sous réserve de vérifier les droits d'utilisation et d'ajouter les annotations de détection.
 
+### Entraîner un classificateur de test sur ces photos
+
+En attendant les annotations de détection, les photos classées par valeur permettent d'entraîner un classificateur distinct. Un modèle de test entraîné est fourni dans `models/mad_classifier.pt`. Il prédit la valeur d'un objet isolé dans une photo recadrée ; il **ne détecte pas plusieurs objets** et ne remplace pas `best_mad_detector.pt`.
+
+Évaluation du modèle fourni sur 67 images de test dédupliquées (split réservé, 11 classes) : **77,61 % top-1** et **98,51 % top-5**. Ces scores mesurent la classification de photos isolées, pas la détection ni le comptage dans une scène.
+
+```powershell
+python -m mad_counter train-classifier --source "..\dataset\Moroccan Money dataset" --device cpu --imgsz 128
+```
+
+Le jeu est dédupliqué par empreinte de fichier avant une séparation entraînement/validation/test. La précision top-1 sur le jeu de test réservé est affichée, puis le modèle est écrit dans `models/mad_classifier.pt`. L'entraînement commence avec les poids classification pré-entraînés Ultralytics `yolo11n-cls.pt`, qui sont téléchargés la première fois.
+
+Testez une photo contenant une seule pièce ou un seul billet :
+
+```powershell
+python -m mad_counter classify --weights models/mad_classifier.pt --source chemin\vers\photo_recadree.jpg
+```
+
+Les détails de l'entraînement et les métriques sont dans [models/README.md](./models/README.md) et [models/mad_classifier_metrics.json](./models/mad_classifier_metrics.json). Les images de test classées par valeur ne sont pas des boîtes annotées et les métriques du classificateur ne mesurent pas la capacité à compter dans une scène réelle.
+
 ## 3. Entraîner et comparer les modèles
 
 Depuis la racine de ce projet :
@@ -122,9 +142,9 @@ python -m unittest discover -s tests
 ## Arborescence
 
 ```text
-mad_counter/          Code d'entraînement, d'inférence et interface en ligne de commande
+mad_counter/          Code d'entraînement, de classification, d'inférence et interface CLI
 dataset/data.yaml     Configuration YOLO et ordre des classes
-models/               Poids entraînés (créés localement)
+models/               Poids du classificateur de démonstration et détecteur entraîné (si disponible)
 runs/                 Journaux, résultats et comparaison (créés localement)
 output/               Prédictions annotées (créées localement)
 ```

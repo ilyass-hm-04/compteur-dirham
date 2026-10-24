@@ -66,9 +66,9 @@ def train_and_compare(
     output_dir="runs",
 ):
     """Entraîne les modèles demandés et sauvegarde le meilleur par mAP50-95."""
-    from ultralytics import YOLO
-
     data_path = _read_dataset_config(data_path)
+    from .model_loading import load_yolo_model
+
     output_dir = Path(output_dir).resolve()
     runs_dir = output_dir / "train"
     runs_dir.mkdir(parents=True, exist_ok=True)
@@ -78,7 +78,11 @@ def train_and_compare(
     for weights in candidates:
         run_name = Path(weights).stem
         print(f"\n===== Entraînement de {run_name} =====")
-        model = YOLO(weights)
+        model = load_yolo_model(weights) if Path(weights).is_file() else None
+        if model is None:
+            from ultralytics import YOLO
+
+            model = YOLO(weights)
         model.train(
             data=str(data_path),
             epochs=epochs,
@@ -108,7 +112,7 @@ def train_and_compare(
                 f"Poids best.pt manquants après entraînement : {best_weights}"
             )
 
-        trained_model = YOLO(str(best_weights))
+        trained_model = load_yolo_model(best_weights)
         from .inference import _validate_model_names
 
         _validate_model_names(trained_model.names)
@@ -159,14 +163,14 @@ def train_and_compare(
 
 def evaluate_model(weights, data_path, image_size=640, device="auto"):
     """Évalue un modèle existant sur le split de validation."""
-    from ultralytics import YOLO
-
     data_path = _read_dataset_config(data_path)
     weights = Path(weights)
     if not weights.is_file():
         raise FileNotFoundError(f"Poids introuvables : {weights}")
 
-    model = YOLO(str(weights))
+    from .model_loading import load_yolo_model
+
+    model = load_yolo_model(weights)
     from .inference import _validate_model_names
 
     _validate_model_names(model.names)
