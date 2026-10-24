@@ -1,0 +1,17 @@
+path: .
+train: train/images
+val: valid/images
+test: test/images
+
+names:
+  0: coin_10c
+  1: coin_20c
+  2: coin_50c
+  3: coin_1dh
+  4: coin_2dh
+  5: coin_5dh
+  6: coin_10dh
+  7: note_20dh
+  8: note_50dh
+  9: note_100dh
+  10: note_200dh
